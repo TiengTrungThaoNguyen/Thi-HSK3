@@ -101,10 +101,8 @@
   .pool .letter{ font-weight:700; color:var(--doc-accent); min-width:1.2em; }
   .wordbank{ display:flex; flex-wrap:wrap; gap:8px 16px; background:var(--surface-2); border-radius:8px; padding:12px 14px; margin-bottom:16px; justify-content:center; font-family:"Be Vietnam Pro",sans-serif;}
   .wordbank .letter{ color:var(--doc-accent); margin-right:4px; font-weight:700; }
-  .ngheGrid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
-  .ngheGrid .cell{ border:1px solid var(--border); border-radius:8px; padding:8px; display:flex; align-items:center; gap:8px; background:var(--surface-2); }
-  .ngheGrid .cell .letter{ font-weight:700; color:var(--nghe-accent); font-family:"Be Vietnam Pro",sans-serif; }
-  .ngheGrid img{ max-width:100%; max-height:110px; border-radius:6px; display:block; }
+  .ngheImageWrap{ border:1px solid var(--border); border-radius:8px; padding:8px; background:var(--surface-2); margin-bottom:14px; text-align:center; }
+  .ngheImageWrap img{ max-width:100%; border-radius:6px; display:inline-block; }
   .orderAnswer{ min-height:44px; border:1.5px dashed var(--border); border-radius:8px; padding:8px; display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; background:var(--surface-2); }
   .orderAnswer .placeholder{ color:var(--ink-muted); font-size:.85rem; font-family:"Be Vietnam Pro",sans-serif; }
   .wordChip{ font-size:1.02rem; border:1.5px solid var(--border); background:var(--surface); border-radius:6px; padding:5px 10px; cursor:pointer; }
@@ -302,12 +300,9 @@ function bubbleRow(qid, options, kind){
 function renderNgheP1(part){
   const h1 = heading('nghe_p1', part.items);
   let h = `<div class="partHead"><div class="zh">${h1.zh}</div><div class="vi ui">${h1.vi}</div></div>`;
-  h += '<div class="ngheGrid">';
-  part.letters.forEach(L=>{
-    const url = part.images[L];
-    h += `<div class="cell"><span class="letter">${L}</span>${url ? `<img src="${url}" alt="${L}">` : '<span class="ui" style="color:var(--ink-muted);font-size:.8rem">(chưa có ảnh)</span>'}</div>`;
-  });
-  h += '</div>';
+  h += part.image
+    ? `<div class="ngheImageWrap"><img src="${part.image}" alt="Tranh A-F"></div>`
+    : `<div class="tbdNote">⏳ Chưa có ảnh cho phần này.</div>`;
   part.items.forEach(it=>{
     h += `<div class="qRow"><span class="qNum">${it.id}.</span>${bubbleRow(it.id, part.letters, 'letter')}</div>`;
   });
