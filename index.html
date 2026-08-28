@@ -195,7 +195,7 @@
 <script>
 /* ================= STATE ================= */
 // Link Web App (Apps Script) đã Deploy — sửa lại nếu bạn deploy link khác.
-const API_URL = 'https://script.google.com/macros/s/AKfycbx7rGRksnbfEVnF72Ke2YP90iGF1AokjdlaeawzfYv3H8bBUkBwAkPxosVsXuZyDK44Qg/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwCuImWZ94iOajZ26WyT7ClEuGKY_rldFCTZKNO1tmoiyTR4bf5ZXiJhkxvpOpRaDX-GA/exec';
 let DATA = null;
 let currentLesson = '';
 let hoTen = '';
@@ -347,7 +347,8 @@ function renderDocP3(part){
   const h1 = heading('doc_p3', part.items);
   let h = `<div class="partHead"><div class="zh">${h1.zh}</div><div class="vi ui">${h1.vi}</div></div>`;
   part.items.forEach(it=>{
-    h += `<div class="qRow"><span class="qNum">${it.id}.</span><div class="qPassage">${it.passage}</div><div class="qText"><b>* ${it.question}</b></div>${bubbleRow(it.id, it.options, 'text')}</div>`;
+    const questionLine = it.question ? `<div class="qText"><b>* ${it.question}</b></div>` : '';
+    h += `<div class="qRow"><span class="qNum">${it.id}.</span><div class="qPassage">${it.passage}</div>${questionLine}${bubbleRow(it.id, it.options, 'text')}</div>`;
   });
   return h;
 }
@@ -542,10 +543,16 @@ function computeScore(){
   ['doc_p1','doc_p2','doc_p3'].forEach(k=>{
     DATA[k].items.forEach(it=> tally(doc, it.id, it.answer, answers[it.id]) );
   });
+  // Viet_P1 chấp nhận NHIỀU cách sắp xếp đúng (answers là mảng các mảng từ),
+  // nên không dùng tally() so sánh 1-1 như các phần khác — kiểm tra chọn của
+  // học sinh có nằm trong danh sách answers hay không.
   DATA.viet_p1.items.forEach(it=>{
-    const correctStr = (it.answer||[]).join('') || null;
+    const answerList = (it.answers||[]).map(a=>a.join(''));
     const chosen = (answers[it.id]||[]).join('');
-    tally(viet, it.id, correctStr, chosen);
+    if(!answerList.length) return; // chưa có đáp án chuẩn -> không tính câu này
+    viet.total++;
+    const ok = answerList.indexOf(chosen)!==-1;
+    detail[it.id]=ok; if(ok) viet.correct++;
   });
   DATA.viet_p2.items.forEach(it=> tally(viet, it.id, it.answer, (answers[it.id]||'')) );
 
@@ -629,18 +636,20 @@ function revealAnswers(){
     inp.insertAdjacentElement('afterend', hint);
   });
   DATA.viet_p1.items.forEach(it=>{
-    const correctStr = (it.answer||[]).join('');
+    // it.answers là mảng nhiều cách sắp xếp cùng được chấp nhận đúng.
+    const answerList = (it.answers||[]).map(a=>a.join(''));
     const wrap = document.querySelector(`.orderWrap[data-qid="${it.id}"]`);
     document.querySelectorAll(`.wordChip[data-qid="${it.id}"]`).forEach(c=>c.style.pointerEvents='none');
     const note = document.createElement('div');
     note.style.marginTop='6px';
-    if(!correctStr){
+    if(!answerList.length){
       note.className = 'answerHint ui';
       note.textContent = '⏳ chưa có đáp án chuẩn';
     } else {
       const chosen = (answers[it.id]||[]).join('');
-      note.className = 'answerHint ui '+(chosen===correctStr?'correct':'wrong');
-      note.textContent = chosen===correctStr ? '✓ đúng' : `✕ đáp án đúng: ${it.answer.join('')}`;
+      const ok = answerList.indexOf(chosen)!==-1;
+      note.className = 'answerHint ui '+(ok?'correct':'wrong');
+      note.textContent = ok ? '✓ đúng' : `✕ đáp án đúng: ${it.answers[0].join('')}`;
     }
     wrap.appendChild(note);
   });
