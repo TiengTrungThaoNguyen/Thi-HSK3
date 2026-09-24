@@ -133,6 +133,14 @@
   .noteBox{background:#fff7ed; border:1.5px solid #fdba74; border-radius:12px; padding:10px 14px; font-size:13px; color:#9a3412; margin:10px 0;}
   .vietP2Review{background:var(--pink-lighter); border-radius:10px; padding:10px 14px; margin-bottom:10px; font-size:14px;}
   .vietP2Review .mau{color:#065f46; font-style:italic; margin-top:4px;}
+  .reviewSectionTitle{font-weight:800; color:var(--pink-primary-dark); font-size:15px; margin:18px 0 8px;}
+  .reviewItem{border-radius:10px; padding:10px 14px; margin-bottom:8px; font-size:14px; border:1.5px solid var(--pink-light);}
+  .reviewItem.ok{background:#f0fdf4; border-color:#bbf7d0;}
+  .reviewItem.bad{background:#fef2f2; border-color:#fecaca;}
+  .reviewItem .rHead{display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; font-weight:700;}
+  .reviewItem .rAns{font-size:13px; margin-top:4px;}
+  .reviewItem .rExplain{margin-top:8px; background:#fff; border-left:3px solid var(--pink-primary); padding:8px 10px; border-radius:8px; font-size:13px; color:var(--pink-text);}
+  .reviewToggleBtn{margin-top:14px;}
   @media(max-width:520px){
     .scoreGrid{grid-template-columns:1fr;}
     .examHead{flex-direction:column; align-items:flex-start;}
@@ -182,7 +190,7 @@
 <script>
 // ================== CAU HINH ==================
 var API_URL = 'https://script.google.com/macros/s/AKfycbwswNn41A8o-N6jjYcbZpK1ExGT52besx2IRx-8FEwoRWc1DnZye-heRcuif79-Yys/exec';
-var PENALTY_PER_REPLAY = 2; // tru diem Nghe moi lan bam nghe lai
+var PENALTY_PER_REPLAY = 10; // tru diem Nghe (thang 100) moi lan bam nghe lai
 
 // ================== STATE ==================
 var EXAM = null;
@@ -190,11 +198,14 @@ var STUDENT = { hoTen:'', maLop:'', lesson:null };
 var ANSWERS = {};      // qid -> 'A'/'B'/'C'...
 var VIET_P1_TEXT = {}; // qid -> chu Han hoc sinh go
 var VIET_P2_TEXT = {}; // qid -> cau hoc sinh viet
-var REPLAY_COUNT = 0;
+var REPLAYED_SET = {};    // audioId -> true (moi audio chi duoc nghe lai DUNG 1 LAN)
+var REPLAYED_LABELS = []; // ten cac phan da bi bam nghe lai (de ghi vao KetQua)
+var AUDIO_LABEL_MAP = {}; // audioId -> nhan (label) cua audio do
 var TOTAL_QUESTIONS = 0;
 var ANSWERED_SET = {};
 var TIMER_SECS = 0;
 var TIMER_HANDLE = null;
+var LAST_RESULT = null; // luu ket qua sau khi nop bai, dung cho man hinh "Xem lai bai lam"
 
 // ================== TIEN ICH ==================
 function qs(id){ return document.getElementById(id); }
@@ -276,17 +287,18 @@ var audioSeq = 0;
 function audioBarHtml(src, label){
   audioSeq++;
   var id = 'aud'+audioSeq;
+  AUDIO_LABEL_MAP[id] = label;
   if(!src){
     return '<div class="audioBar"><div class="label">🔇 '+label+' (chưa có link audio)</div></div>';
   }
   return '<div class="audioBar" id="bar_'+id+'" onclick="onAudioBarClick(event,\''+id+'\')">'+
     '<div style="flex:1">'+
       '<div class="label">🔊 '+label+'</div>'+
-      '<div class="sub" id="hint_'+id+'">Bấm để nghe (chỉ nghe 1 lần, nghe lại sẽ bị trừ điểm)</div>'+
+      '<div class="sub" id="hint_'+id+'">Bấm để nghe (chỉ được nghe lại đúng 1 lần, nghe lại sẽ bị trừ '+PENALTY_PER_REPLAY+' điểm phần Nghe)</div>'+
     '</div>'+
     '<audio class="audioTrack" id="'+id+'" src="'+src+'" preload="none"></audio>'+
     '<button class="btn" onclick="event.stopPropagation(); startAudio(\''+id+'\')" id="playBtn_'+id+'">▶ Nghe</button>'+
-    '<button class="btn secondary replayBtn" style="display:none" onclick="event.stopPropagation(); replayAudio(\''+id+'\')" id="replayBtn_'+id+'">🔁 Nghe lại</button>'+
+    '<button class="btn secondary replayBtn" style="display:none" onclick="event.stopPropagation(); replayAudio(\''+id+'\')" id="replayBtn_'+id+'">🔁 Nghe lại (-'+PENALTY_PER_REPLAY+' điểm)</button>'+
   '</div>';
 }
 
@@ -307,16 +319,21 @@ function startAudio(id){
   el.currentTime = 0;
   el.play();
   qs('playBtn_'+id).style.display='none';
-  var rb = qs('replayBtn_'+id); if(rb) rb.style.display='inline-block';
+  // chi hien nut "Nghe lai" neu audio nay CHUA tung duoc nghe lai lan nao
+  var rb = qs('replayBtn_'+id);
+  if(rb && !REPLAYED_SET[id]) rb.style.display='inline-block';
   toggleAudioBar(id, true);
 }
 function replayAudio(id){
   var el = qs(id);
-  if(!el) return;
-  REPLAY_COUNT++;
+  if(!el || REPLAYED_SET[id]) return; // da dung luot nghe lai duy nhat roi thi khong cho nghe them
+  REPLAYED_SET[id] = true;
+  REPLAYED_LABELS.push(AUDIO_LABEL_MAP[id] || id);
   el.currentTime = 0;
   el.play();
   toggleAudioBar(id, true);
+  var rb = qs('replayBtn_'+id);
+  if(rb){ rb.style.display = 'none'; rb.disabled = true; }
 }
 
 // ================== TAI DANH SACH BAI ==================
@@ -429,9 +446,9 @@ function renderNgheP1(part){
 function renderNgheMc(part, title, desc){
   var items = part.items || [];
   var h = '<div class="partHead"><div class="name">'+title+'</div><div class="desc">'+desc+'</div></div>';
+  h += audioBarHtml(part.linkAudio, 'Audio '+title);
   items.forEach(function(it, idx){
     h += '<div class="qBlock">';
-    h += audioBarHtml(it.linkAudio, 'Audio câu '+it.id);
     h += '<div class="qRow"><span class="qNum">'+it.id+'.</span>' + bubbleRow(it.id, it.options||{}, 'text') + '</div>';
     h += '</div>';
   });
@@ -532,16 +549,21 @@ function computeScore(){
     detail[it.id] = { chosen: chosen, answer: it.answer, ok: ok, skill:'vietP1' };
   });
 
-  var ngheScore = Math.max(0, Math.round(ngheCorrect/ngheTotal*100) - REPLAY_COUNT*PENALTY_PER_REPLAY);
+  // Chia deu diem theo tung cau, giong cach cham thi that:
+  // Nghe 100 diem / (so cau Nghe), Doc 100 diem / (so cau Doc).
+  // Viet tong 100 diem chia deu 10 cau (5 cau Phan 1 tu dong + 5 cau Phan 2 giao vien cham),
+  // moi cau Viet = 10 diem => Phan 1 tu dong toi da 50 diem, Phan 2 giao vien cham toi da 50 diem.
+  var ngheRaw = Math.round(ngheCorrect/ngheTotal*100);
+  var ngheScore = Math.max(0, ngheRaw - REPLAYED_LABELS.length*PENALTY_PER_REPLAY);
   var docScore = Math.round(docCorrect/docTotal*100);
-  var vietP1Score = Math.round(vietP1Correct/vietP1Total*100);
+  var vietP1Score = Math.round(vietP1Correct/vietP1Total*50);
   var total = ngheScore + docScore + vietP1Score;
 
   var vietP2 = EXAM.viet_p2.items.map(function(it){
     return { id: it.id, text: (VIET_P2_TEXT[it.id]||'').trim(), goiY: it.goiY, mau: it.mau };
   });
 
-  return { ngheScore:ngheScore, docScore:docScore, vietP1Score:vietP1Score, total:total, detail:detail, vietP2:vietP2 };
+  return { ngheScore:ngheScore, docScore:docScore, vietP1Score:vietP1Score, total:total, detail:detail, vietP2:vietP2, replayedParts: REPLAYED_LABELS.slice() };
 }
 
 function submitExam(){
@@ -553,7 +575,7 @@ function submitExam(){
   var payload = {
     hoTen: STUDENT.hoTen, maLop: STUDENT.maLop, lesson: STUDENT.lesson,
     ngheScore: result.ngheScore, docScore: result.docScore, vietP1Score: result.vietP1Score,
-    total: result.total, detail: result.detail, vietP2: result.vietP2
+    total: result.total, detail: result.detail, vietP2: result.vietP2, replayedParts: result.replayedParts
   };
 
   fetch(API_URL, { method:'POST', body: JSON.stringify(payload) })
@@ -568,9 +590,11 @@ function showResult(result){
   html += '<div class="scoreBox"><div class="num">'+result.ngheScore+'</div><div class="lbl">Điểm Nghe (/100)</div></div>';
   html += '<div class="scoreBox"><div class="num">'+result.docScore+'</div><div class="lbl">Điểm Đọc (/100)</div></div>';
   html += '</div>';
-  html += '<div class="scoreBox" style="margin-bottom:12px"><div class="num">'+result.vietP1Score+'</div><div class="lbl">Điểm Viết – Phần 1 (/100, tự động)</div></div>';
-  html += '<div class="totalBox"><div class="num">'+result.total+' / 300</div><div class="lbl">Tổng điểm (tạm tính, CHƯA gồm Viết Phần 2)</div></div>';
-  html += '<div class="noteBox">📝 Phần Viết – Phần 2 (viết câu tự do) sẽ do giáo viên chấm trực tiếp. Câu học sinh viết đã được lưu lại bên dưới và trong trang tính KetQua.</div>';
+  html += '<div class="scoreBox" style="margin-bottom:12px"><div class="num">'+result.vietP1Score+' / 50</div><div class="lbl">Điểm Viết – Phần 1 (tự động, mỗi câu 10 điểm)</div></div>';
+  html += '<div class="totalBox"><div class="num">'+result.total+' / 250</div><div class="lbl">Tổng điểm tạm tính (Nghe 100 + Đọc 100 + Viết P1 50)</div></div>';
+  html += '<div class="noteBox">📝 Phần Viết – Phần 2 (5 câu, mỗi câu 10 điểm, tối đa 50 điểm) sẽ do giáo viên chấm trực tiếp trong trang tính KetQua, sau đó cộng vào để ra tổng điểm cuối cùng trên thang 300 (Nghe 100 + Đọc 100 + Viết 100).' +
+    (result.replayedParts.length ? '<br>🔁 Đã bấm nghe lại: ' + esc(result.replayedParts.join(', ')) + ' (mỗi lần bị trừ '+PENALTY_PER_REPLAY+' điểm phần Nghe).' : '') +
+    '</div>';
 
   html += '<h2 class="cardTitle" style="margin-top:20px">Bài viết Phần 2 của bạn</h2>';
   result.vietP2.forEach(function(v){
@@ -579,9 +603,91 @@ function showResult(result){
     html += '</div>';
   });
 
+  html += '<div class="btnRow reviewToggleBtn"><button class="btn secondary" id="btnToggleReview" onclick="toggleReview()">📋 Xem lại bài làm và đáp án</button></div>';
+  html += '<div id="reviewList" style="display:none"></div>';
   html += '<div class="btnRow"><button class="btn" onclick="location.reload()">Làm bài khác</button></div>';
   qs('resultCard').innerHTML = html;
   qs('resultOverlay').style.display = 'block';
+  LAST_RESULT = result;
+}
+
+function toggleReview(){
+  var box = qs('reviewList');
+  var btn = qs('btnToggleReview');
+  var showing = box.style.display !== 'none';
+  if(showing){
+    box.style.display = 'none';
+    btn.textContent = '📋 Xem lại bài làm và đáp án';
+  } else {
+    if(!box.dataset.filled){ box.innerHTML = buildReviewHtml(LAST_RESULT); box.dataset.filled = '1'; }
+    box.style.display = 'block';
+    btn.textContent = '🔼 Ẩn bài làm và đáp án';
+  }
+}
+
+// dinh dang 1 dap an (chu cai) thanh van ban de doc, kem noi dung neu co (vd options text
+// hoac pool text); neu khong tim thay noi dung thi chi hien chu cai.
+function letterWithText(letter, sourceMap){
+  if(!letter) return '(chưa chọn)';
+  var txt = sourceMap && sourceMap[letter];
+  return txt ? (letter + '. ' + txt) : letter;
+}
+
+function reviewItemHtml(no, ok, chosenText, correctText, giaiThich){
+  var cls = ok ? 'ok' : 'bad';
+  var icon = ok ? '✅' : '❌';
+  var html = '<div class="reviewItem '+cls+'">';
+  html += '<div class="rHead"><span>'+icon+' Câu '+no+'</span></div>';
+  html += '<div class="rAns">Đáp án của bạn: <b>'+esc(chosenText)+'</b></div>';
+  if(!ok) html += '<div class="rAns">Đáp án đúng: <b>'+esc(correctText)+'</b></div>';
+  if(!ok && giaiThich) html += '<div class="rExplain">💡 Giải thích: '+esc(giaiThich)+'</div>';
+  html += '</div>';
+  return html;
+}
+
+function buildReviewHtml(result){
+  var h = '';
+
+  h += '<div class="reviewSectionTitle">Nghe – Phần 1</div>';
+  EXAM.nghe_p1.items.forEach(function(it){
+    var chosen = ANSWERS[it.id] || '';
+    var ok = !!(it.answer && chosen === it.answer);
+    h += reviewItemHtml(it.id, ok, chosen || '(chưa chọn)', it.answer || '?', it.giaiThich);
+  });
+
+  [['Nghe – Phần 2', EXAM.nghe_p2], ['Nghe – Phần 3', EXAM.nghe_p3]].forEach(function(pair){
+    h += '<div class="reviewSectionTitle">'+pair[0]+'</div>';
+    pair[1].items.forEach(function(it){
+      var chosen = ANSWERS[it.id] || '';
+      var ok = !!(it.answer && chosen === it.answer);
+      h += reviewItemHtml(it.id, ok, letterWithText(chosen, it.options), letterWithText(it.answer, it.options), it.giaiThich);
+    });
+  });
+
+  [['Đọc – Phần 1', EXAM.doc_p1], ['Đọc – Phần 2', EXAM.doc_p2]].forEach(function(pair){
+    h += '<div class="reviewSectionTitle">'+pair[0]+'</div>';
+    pair[1].items.forEach(function(it){
+      var chosen = ANSWERS[it.id] || '';
+      var ok = !!(it.answer && chosen === it.answer);
+      h += reviewItemHtml(it.id, ok, letterWithText(chosen, pair[1].pool), letterWithText(it.answer, pair[1].pool), it.giaiThich);
+    });
+  });
+
+  h += '<div class="reviewSectionTitle">Đọc – Phần 3</div>';
+  EXAM.doc_p3.items.forEach(function(it){
+    var chosen = ANSWERS[it.id] || '';
+    var ok = !!(it.answer && chosen === it.answer);
+    h += reviewItemHtml(it.id, ok, letterWithText(chosen, it.options), letterWithText(it.answer, it.options), it.giaiThich);
+  });
+
+  h += '<div class="reviewSectionTitle">Viết – Phần 1</div>';
+  EXAM.viet_p1.items.forEach(function(it){
+    var chosen = (VIET_P1_TEXT[it.id] || '').trim();
+    var ok = !!(it.answer && chosen === it.answer);
+    h += reviewItemHtml(it.id, ok, chosen || '(chưa điền)', it.answer || '?', it.giaiThich);
+  });
+
+  return h;
 }
 
 function markAllAnswers(result){
