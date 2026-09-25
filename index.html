@@ -149,8 +149,6 @@
   .rOptionRow.isChosen{background:#fee2e2;}
   .badgeOk{color:#166534; font-weight:700; font-size:11px;}
   .badgeBad{color:#991b1b; font-weight:700; font-size:11px;}
-  .rImgRow{display:flex; align-items:center; gap:8px;}
-  .rImgRow img{width:36px; height:36px; object-fit:cover; border-radius:6px; flex-shrink:0;}
   @media(max-width:520px){
     .scoreGrid{grid-template-columns:1fr;}
     .examHead{flex-direction:column; align-items:flex-start;}
@@ -665,18 +663,18 @@ function optionsReviewHtml(options, chosen, correct){
   return html;
 }
 
-// Rieng Nghe Phan 1: dap an la anh - dung cung 1 kieu danh sach mau xanh/do don gian
-// giong het optionsReviewHtml (chi them 1 anh thu nho o dau dong) cho DE HIEU, khong lam
-// rieng 1 kieu luoi o phuc tap.
-function imagePoolReviewHtml(pool, chosen, correct){
-  var letters = Object.keys(pool||{}).filter(function(l){ return pool[l]; });
-  var html = '<div class="rOptions">';
+// Rieng Nghe Phan 1: GIONG HET kieu hien thi luc lam bai (poolImageBlock + bubbleRow letter) -
+// tranh pool anh vao dau PHAN (1 lan duy nhat, khong lap lai tung cau), moi cau chi la 1 hang
+// bubble tron chu cai don gian, to xanh o dap an dung / do o dap an hoc sinh chon sai.
+// Khong hien anh nho trong tung dong nua (truoc day qua roi/kho nhin).
+function bubbleReviewHtml(letters, chosen, correct){
+  var html = '<div class="bubbles">';
   letters.forEach(function(L){
-    var cls = 'rOptionRow rImgRow';
-    var badge = '';
-    if(L===correct){ cls += ' isCorrect'; badge = ' <span class="badgeOk">✅ đáp án đúng</span>'; }
-    else if(L===chosen){ cls += ' isChosen'; badge = ' <span class="badgeBad">❌ bạn đã chọn</span>'; }
-    html += '<div class="'+cls+'"><img src="'+pool[L]+'" alt="Ảnh '+L+'">'+L+badge+'</div>';
+    var cls = 'bubble';
+    var mark = '';
+    if(L===correct){ cls += ' correct'; mark = ' ✅'; }
+    else if(L===chosen){ cls += ' wrong'; mark = ' ❌'; }
+    html += '<div class="'+cls+'">'+L+mark+'</div>';
   });
   html += '</div>';
   if(!chosen) html += '<div class="rAns">(Bạn chưa chọn đáp án)</div>';
@@ -687,11 +685,15 @@ function buildReviewHtml(result){
   var h = '';
 
   h += '<div class="reviewSectionTitle">Nghe – Phần 1</div>';
-  EXAM.nghe_p1.items.forEach(function(it){
-    var chosen = ANSWERS[it.id] || '';
-    var ok = !!(it.answer && chosen === it.answer);
-    h += reviewItemHtml(it.id, ok, imagePoolReviewHtml(EXAM.nghe_p1.pool, chosen, it.answer), it.giaiThich);
-  });
+  h += poolImageBlock(EXAM.nghe_p1.pool||{});
+  (function(){
+    var letters = Object.keys(EXAM.nghe_p1.pool||{}).filter(function(l){ return EXAM.nghe_p1.pool[l]; });
+    EXAM.nghe_p1.items.forEach(function(it){
+      var chosen = ANSWERS[it.id] || '';
+      var ok = !!(it.answer && chosen === it.answer);
+      h += reviewItemHtml(it.id, ok, bubbleReviewHtml(letters, chosen, it.answer), it.giaiThich);
+    });
+  })();
 
   [['Nghe – Phần 2', EXAM.nghe_p2], ['Nghe – Phần 3', EXAM.nghe_p3]].forEach(function(pair){
     h += '<div class="reviewSectionTitle">'+pair[0]+'</div>';
