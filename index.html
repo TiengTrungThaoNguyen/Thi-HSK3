@@ -141,6 +141,20 @@
   .reviewItem .rAns{font-size:13px; margin-top:4px;}
   .reviewItem .rExplain{margin-top:8px; background:#fff; border-left:3px solid var(--pink-primary); padding:8px 10px; border-radius:8px; font-size:13px; color:var(--pink-text);}
   .reviewToggleBtn{margin-top:14px;}
+  .rPrompt{font-size:14px; font-weight:600; margin-bottom:6px;}
+  .rSentence{font-size:15px; margin-bottom:6px;}
+  .rOptions{margin:4px 0;}
+  .rOptionRow{padding:5px 9px; border-radius:7px; font-size:13px; margin-bottom:3px; background:#fff;}
+  .rOptionRow.isCorrect{background:#dcfce7; font-weight:700;}
+  .rOptionRow.isChosen{background:#fee2e2;}
+  .badgeOk{color:#166534; font-weight:700; font-size:11px;}
+  .badgeBad{color:#991b1b; font-weight:700; font-size:11px;}
+  .rImgOptions{display:flex; gap:10px; flex-wrap:wrap; margin:8px 0;}
+  .rImgOption{text-align:center; border:2px solid var(--pink-light); border-radius:8px; padding:6px; width:100px; background:#fff;}
+  .rImgOption.isCorrect{border-color:#16a34a; background:#f0fdf4;}
+  .rImgOption.isChosen{border-color:#dc2626; background:#fef2f2;}
+  .rImgOption img{width:100%; border-radius:6px; display:block;}
+  .rImgLabel{font-size:11px; margin-top:4px; font-weight:700;}
   @media(max-width:520px){
     .scoreGrid{grid-template-columns:1fr;}
     .examHead{flex-direction:column; align-items:flex-start;}
@@ -625,23 +639,50 @@ function toggleReview(){
   }
 }
 
-// dinh dang 1 dap an (chu cai) thanh van ban de doc, kem noi dung neu co (vd options text
-// hoac pool text); neu khong tim thay noi dung thi chi hien chu cai.
-function letterWithText(letter, sourceMap){
-  if(!letter) return '(chưa chọn)';
-  var txt = sourceMap && sourceMap[letter];
-  return txt ? (letter + '. ' + txt) : letter;
-}
-
-function reviewItemHtml(no, ok, chosenText, correctText, giaiThich){
+// Khung 1 the review: icon dung/sai, noi dung cau (bodyHtml tuy loai cau), va giai thich
+// (hien LUON neu co, khong chi rieng cau sai - de hoc sinh xem lai ca cau dung).
+function reviewItemHtml(no, ok, bodyHtml, giaiThich){
   var cls = ok ? 'ok' : 'bad';
   var icon = ok ? '✅' : '❌';
   var html = '<div class="reviewItem '+cls+'">';
   html += '<div class="rHead"><span>'+icon+' Câu '+no+'</span></div>';
-  html += '<div class="rAns">Đáp án của bạn: <b>'+esc(chosenText)+'</b></div>';
-  if(!ok) html += '<div class="rAns">Đáp án đúng: <b>'+esc(correctText)+'</b></div>';
+  html += bodyHtml;
   if(!ok && giaiThich) html += '<div class="rExplain">💡 Giải thích: '+esc(giaiThich)+'</div>';
   html += '</div>';
+  return html;
+}
+
+// Hien day du cac lua chon (chu + noi dung), to mau xanh o dap an dung, mau do o dap an
+// hoc sinh chon sai - giup hoc sinh nho lai toan bo noi dung cau hoi, khong chi 1 dap an.
+function optionsReviewHtml(options, chosen, correct){
+  var letters = Object.keys(options||{}).filter(function(l){ return options[l]; });
+  var html = '<div class="rOptions">';
+  letters.forEach(function(L){
+    var cls = 'rOptionRow';
+    var badge = '';
+    if(L===correct){ cls += ' isCorrect'; badge = ' <span class="badgeOk">✅ đáp án đúng</span>'; }
+    else if(L===chosen){ cls += ' isChosen'; badge = ' <span class="badgeBad">❌ bạn đã chọn</span>'; }
+    html += '<div class="'+cls+'">'+L+'. '+esc(options[L])+badge+'</div>';
+  });
+  if(!chosen) html += '<div class="rAns">(Bạn chưa chọn đáp án)</div>';
+  html += '</div>';
+  return html;
+}
+
+// Rieng Nghe Phan 1: dap an la anh, hien lai tung anh trong pool kem chu cai + danh dau
+// anh nao dung / anh nao hoc sinh da chon, de hoc sinh nho lai de bai truc quan.
+function imagePoolReviewHtml(pool, chosen, correct){
+  var letters = Object.keys(pool||{}).filter(function(l){ return pool[l]; });
+  var html = '<div class="rImgOptions">';
+  letters.forEach(function(L){
+    var cls = 'rImgOption';
+    var badge = '';
+    if(L===correct){ cls += ' isCorrect'; badge = '✅ đúng'; }
+    else if(L===chosen){ cls += ' isChosen'; badge = '❌ bạn chọn'; }
+    html += '<div class="'+cls+'"><img src="'+pool[L]+'" alt="Ảnh '+L+'"><div class="rImgLabel">'+L+(badge?' - '+badge:'')+'</div></div>';
+  });
+  html += '</div>';
+  if(!chosen) html += '<div class="rAns">(Bạn chưa chọn đáp án)</div>';
   return html;
 }
 
@@ -652,7 +693,7 @@ function buildReviewHtml(result){
   EXAM.nghe_p1.items.forEach(function(it){
     var chosen = ANSWERS[it.id] || '';
     var ok = !!(it.answer && chosen === it.answer);
-    h += reviewItemHtml(it.id, ok, chosen || '(chưa chọn)', it.answer || '?', it.giaiThich);
+    h += reviewItemHtml(it.id, ok, imagePoolReviewHtml(EXAM.nghe_p1.pool, chosen, it.answer), it.giaiThich);
   });
 
   [['Nghe – Phần 2', EXAM.nghe_p2], ['Nghe – Phần 3', EXAM.nghe_p3]].forEach(function(pair){
@@ -660,31 +701,46 @@ function buildReviewHtml(result){
     pair[1].items.forEach(function(it){
       var chosen = ANSWERS[it.id] || '';
       var ok = !!(it.answer && chosen === it.answer);
-      h += reviewItemHtml(it.id, ok, letterWithText(chosen, it.options), letterWithText(it.answer, it.options), it.giaiThich);
+      h += reviewItemHtml(it.id, ok, optionsReviewHtml(it.options, chosen, it.answer), it.giaiThich);
     });
   });
 
-  [['Đọc – Phần 1', EXAM.doc_p1], ['Đọc – Phần 2', EXAM.doc_p2]].forEach(function(pair){
-    h += '<div class="reviewSectionTitle">'+pair[0]+'</div>';
-    pair[1].items.forEach(function(it){
+  [['Đọc – Phần 1', EXAM.doc_p1, false], ['Đọc – Phần 2', EXAM.doc_p2, true]].forEach(function(triple){
+    h += '<div class="reviewSectionTitle">'+triple[0]+'</div>';
+    var part = triple[1], isBlank = triple[2];
+    part.items.forEach(function(it){
       var chosen = ANSWERS[it.id] || '';
       var ok = !!(it.answer && chosen === it.answer);
-      h += reviewItemHtml(it.id, ok, letterWithText(chosen, pair[1].pool), letterWithText(it.answer, pair[1].pool), it.giaiThich);
+      var body = '<div class="rPrompt">'+(isBlank ? renderBlankSentence(it.prompt) : esc(it.prompt))+'</div>';
+      body += optionsReviewHtml(part.pool, chosen, it.answer);
+      h += reviewItemHtml(it.id, ok, body, it.giaiThich);
     });
   });
 
   h += '<div class="reviewSectionTitle">Đọc – Phần 3</div>';
-  EXAM.doc_p3.items.forEach(function(it){
-    var chosen = ANSWERS[it.id] || '';
-    var ok = !!(it.answer && chosen === it.answer);
-    h += reviewItemHtml(it.id, ok, letterWithText(chosen, it.options), letterWithText(it.answer, it.options), it.giaiThich);
-  });
+  (function(){
+    var lastPassage = null;
+    EXAM.doc_p3.items.forEach(function(it){
+      var chosen = ANSWERS[it.id] || '';
+      var ok = !!(it.answer && chosen === it.answer);
+      var body = '';
+      if(it.passage && it.passage !== lastPassage){
+        body += '<div class="passageBox">'+esc(it.passage)+'</div>';
+        lastPassage = it.passage;
+      }
+      body += '<div class="rPrompt">'+esc(it.question)+'</div>';
+      body += optionsReviewHtml(it.options, chosen, it.answer);
+      h += reviewItemHtml(it.id, ok, body, it.giaiThich);
+    });
+  })();
 
   h += '<div class="reviewSectionTitle">Viết – Phần 1</div>';
   EXAM.viet_p1.items.forEach(function(it){
     var chosen = (VIET_P1_TEXT[it.id] || '').trim();
     var ok = !!(it.answer && chosen === it.answer);
-    h += reviewItemHtml(it.id, ok, chosen || '(chưa điền)', it.answer || '?', it.giaiThich);
+    var body = '<div class="rSentence">'+esc(it.before)+' <span class="pinyinChip">'+esc(it.pinyin)+'</span> <b class="blankMark">'+(chosen?esc(chosen):'?')+'</b> '+esc(it.after)+'</div>';
+    body += '<div class="rAns">Bạn điền: <b>'+(chosen?esc(chosen):'(chưa điền)')+'</b>' + (ok ? ' ✅' : ' ❌ — Đáp án đúng: <b>'+esc(it.answer)+'</b>') + '</div>';
+    h += reviewItemHtml(it.id, ok, body, it.giaiThich);
   });
 
   return h;
