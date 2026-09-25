@@ -149,12 +149,8 @@
   .rOptionRow.isChosen{background:#fee2e2;}
   .badgeOk{color:#166534; font-weight:700; font-size:11px;}
   .badgeBad{color:#991b1b; font-weight:700; font-size:11px;}
-  .rImgOptions{display:flex; gap:10px; flex-wrap:wrap; margin:8px 0;}
-  .rImgOption{text-align:center; border:2px solid var(--pink-light); border-radius:8px; padding:6px; width:100px; background:#fff;}
-  .rImgOption.isCorrect{border-color:#16a34a; background:#f0fdf4;}
-  .rImgOption.isChosen{border-color:#dc2626; background:#fef2f2;}
-  .rImgOption img{width:100%; border-radius:6px; display:block;}
-  .rImgLabel{font-size:11px; margin-top:4px; font-weight:700;}
+  .rImgRow{display:flex; align-items:center; gap:8px;}
+  .rImgRow img{width:36px; height:36px; object-fit:cover; border-radius:6px; flex-shrink:0;}
   @media(max-width:520px){
     .scoreGrid{grid-template-columns:1fr;}
     .examHead{flex-direction:column; align-items:flex-start;}
@@ -669,17 +665,18 @@ function optionsReviewHtml(options, chosen, correct){
   return html;
 }
 
-// Rieng Nghe Phan 1: dap an la anh, hien lai tung anh trong pool kem chu cai + danh dau
-// anh nao dung / anh nao hoc sinh da chon, de hoc sinh nho lai de bai truc quan.
+// Rieng Nghe Phan 1: dap an la anh - dung cung 1 kieu danh sach mau xanh/do don gian
+// giong het optionsReviewHtml (chi them 1 anh thu nho o dau dong) cho DE HIEU, khong lam
+// rieng 1 kieu luoi o phuc tap.
 function imagePoolReviewHtml(pool, chosen, correct){
   var letters = Object.keys(pool||{}).filter(function(l){ return pool[l]; });
-  var html = '<div class="rImgOptions">';
+  var html = '<div class="rOptions">';
   letters.forEach(function(L){
-    var cls = 'rImgOption';
+    var cls = 'rOptionRow rImgRow';
     var badge = '';
-    if(L===correct){ cls += ' isCorrect'; badge = '✅ đúng'; }
-    else if(L===chosen){ cls += ' isChosen'; badge = '❌ bạn chọn'; }
-    html += '<div class="'+cls+'"><img src="'+pool[L]+'" alt="Ảnh '+L+'"><div class="rImgLabel">'+L+(badge?' - '+badge:'')+'</div></div>';
+    if(L===correct){ cls += ' isCorrect'; badge = ' <span class="badgeOk">✅ đáp án đúng</span>'; }
+    else if(L===chosen){ cls += ' isChosen'; badge = ' <span class="badgeBad">❌ bạn đã chọn</span>'; }
+    html += '<div class="'+cls+'"><img src="'+pool[L]+'" alt="Ảnh '+L+'">'+L+badge+'</div>';
   });
   html += '</div>';
   if(!chosen) html += '<div class="rAns">(Bạn chưa chọn đáp án)</div>';
