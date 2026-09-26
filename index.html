@@ -144,8 +144,8 @@
   .reviewToggleBtn{margin-top:14px;}
   .rPrompt{font-size:14.5px; font-weight:700; margin-bottom:8px; color:#111827;}
   .rSentence{font-size:15px; margin-bottom:8px; color:#111827;}
-  .rOptions{margin:6px 0 2px; display:flex; flex-direction:column; gap:6px;}
-  .rOptionRow{padding:8px 12px; border-radius:9px; font-size:13.5px; background:#fff; border:1.5px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between; gap:10px; line-height:1.4; color:#111827;}
+  .rOptions{margin:6px 0 2px; display:flex; flex-direction:column; align-items:flex-start; gap:6px;}
+  .rOptionRow{padding:8px 12px; border-radius:9px; font-size:13.5px; background:#fff; border:1.5px solid #e2e8f0; display:inline-flex; align-items:center; gap:8px; line-height:1.4; color:#111827; max-width:100%;}
   .rOptionRow.isCorrect{border-color:var(--green); background:#fff; font-weight:700; color:var(--green);}
   .rOptionRow.isChosen{border-color:var(--red); background:#fff; color:var(--red);}
   .badgeOk{background:var(--green); color:#fff; font-weight:800; font-size:12px; width:20px; height:20px; line-height:20px; text-align:center; border-radius:999px; display:inline-block; flex-shrink:0;}
@@ -675,8 +675,8 @@ function bubbleReviewHtml(options, chosen, correct, kind){
   letters.forEach(function(L){
     var cls = 'bubble';
     var mark = '';
-    if(L===correct){ cls += ' correct'; mark = ' ✅'; }
-    else if(L===chosen){ cls += ' wrong'; mark = ' ❌'; }
+    if(L===correct){ cls += ' correct'; mark = ' <span class="badgeOk">✓</span>'; }
+    else if(L===chosen){ cls += ' wrong'; mark = ' <span class="badgeBad">✗</span>'; }
     var label = kind==='text' ? (L+'. '+esc(getText(L))) : L;
     html += '<div class="'+cls+'">'+label+mark+'</div>';
   });
