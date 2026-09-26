@@ -90,13 +90,13 @@
   .bubbles{display:flex; gap:8px; flex-wrap:wrap;}
   .bubble{
     padding:9px 16px; border-radius:999px; border:2px solid var(--pink-light);
-    background:#fff; cursor:pointer; font-weight:600; font-size:14px; color:var(--pink-text);
+    background:#fff; cursor:pointer; font-weight:600; font-size:14px; color:#1e293b;
     transition:all .15s;
   }
   .bubble:hover{border-color:var(--pink-accent);}
   .bubble.selected{background:var(--pink-primary); border-color:var(--pink-primary); color:#fff;}
-  .bubble.correct{background:#dcfce7; border-color:var(--green); color:#166534;}
-  .bubble.wrong{background:#fee2e2; border-color:var(--red); color:#991b1b;}
+  .bubble.correct{background:#dcfce7; border-color:var(--green); color:#166534; font-weight:800;}
+  .bubble.wrong{background:#fee2e2; border-color:var(--red); color:#991b1b; font-weight:800;}
   .imgPool{display:flex; gap:14px; flex-wrap:wrap; margin-bottom:14px;}
   .imgPoolItem img{display:block; width:100%; max-width:340px; height:auto; border-radius:10px; border:2px solid var(--pink-light);}
   .textPool{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; background:var(--pink-lighter); padding:12px; border-radius:12px;}
@@ -133,22 +133,23 @@
   .noteBox{background:#fff7ed; border:1.5px solid #fdba74; border-radius:12px; padding:10px 14px; font-size:13px; color:#9a3412; margin:10px 0;}
   .vietP2Review{background:var(--pink-lighter); border-radius:10px; padding:10px 14px; margin-bottom:10px; font-size:14px;}
   .vietP2Review .mau{color:#065f46; font-style:italic; margin-top:4px;}
-  .reviewSectionTitle{font-weight:800; color:var(--pink-primary-dark); font-size:15px; margin:18px 0 8px;}
-  .reviewItem{border-radius:10px; padding:10px 14px; margin-bottom:8px; font-size:14px; border:1.5px solid var(--pink-light);}
-  .reviewItem.ok{background:#f0fdf4; border-color:#bbf7d0;}
-  .reviewItem.bad{background:#fef2f2; border-color:#fecaca;}
-  .reviewItem .rHead{display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; font-weight:700;}
-  .reviewItem .rAns{font-size:13px; margin-top:4px;}
-  .reviewItem .rExplain{margin-top:8px; background:#fff; border-left:3px solid var(--pink-primary); padding:8px 10px; border-radius:8px; font-size:13px; color:var(--pink-text);}
+  #reviewList{background:#fbfcff; border-radius:14px; padding:6px 12px;}
+  .reviewSectionTitle{font-weight:800; color:var(--pink-primary-dark); font-size:15px; margin:22px 0 4px; padding-bottom:6px;}
+  .reviewSectionTitle:first-child{margin-top:6px;}
+  .reviewItem{padding:16px 2px; margin-bottom:0; font-size:14px; background:transparent; border:none; border-top:1px dashed var(--pink-light); border-radius:0; box-shadow:none;}
+  .reviewSectionTitle + .reviewItem{border-top:none;}
+  .reviewItem .rHead{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; font-weight:700; color:#111827; margin-bottom:8px; font-size:14.5px;}
+  .reviewItem .rAns{font-size:13px; margin-top:6px; color:#111827;}
+  .reviewItem .rExplain{margin-top:10px; background:var(--pink-lighter); border-left:3px solid var(--pink-primary); padding:10px 12px; border-radius:8px; font-size:13px; color:var(--pink-text); line-height:1.5;}
   .reviewToggleBtn{margin-top:14px;}
-  .rPrompt{font-size:14px; font-weight:600; margin-bottom:6px;}
-  .rSentence{font-size:15px; margin-bottom:6px;}
-  .rOptions{margin:4px 0;}
-  .rOptionRow{padding:5px 9px; border-radius:7px; font-size:13px; margin-bottom:3px; background:#fff;}
-  .rOptionRow.isCorrect{background:#dcfce7; font-weight:700;}
-  .rOptionRow.isChosen{background:#fee2e2;}
-  .badgeOk{color:#166534; font-weight:700; font-size:11px;}
-  .badgeBad{color:#991b1b; font-weight:700; font-size:11px;}
+  .rPrompt{font-size:14.5px; font-weight:700; margin-bottom:8px; color:#111827;}
+  .rSentence{font-size:15px; margin-bottom:8px; color:#111827;}
+  .rOptions{margin:6px 0 2px; display:flex; flex-direction:column; gap:6px;}
+  .rOptionRow{padding:8px 12px; border-radius:9px; font-size:13.5px; background:#fff; border:1.5px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between; gap:10px; line-height:1.4; color:#111827;}
+  .rOptionRow.isCorrect{border-color:var(--green); background:#fff; font-weight:700; color:var(--green);}
+  .rOptionRow.isChosen{border-color:var(--red); background:#fff; color:var(--red);}
+  .badgeOk{background:var(--green); color:#fff; font-weight:800; font-size:12px; width:20px; height:20px; line-height:20px; text-align:center; border-radius:999px; display:inline-block; flex-shrink:0;}
+  .badgeBad{background:var(--red); color:#fff; font-weight:800; font-size:12px; width:20px; height:20px; line-height:20px; text-align:center; border-radius:999px; display:inline-block; flex-shrink:0;}
   @media(max-width:520px){
     .scoreGrid{grid-template-columns:1fr;}
     .examHead{flex-direction:column; align-items:flex-start;}
@@ -654,8 +655,8 @@ function optionsReviewHtml(options, chosen, correct){
   letters.forEach(function(L){
     var cls = 'rOptionRow';
     var badge = '';
-    if(L===correct){ cls += ' isCorrect'; badge = ' <span class="badgeOk">✅ đáp án đúng</span>'; }
-    else if(L===chosen){ cls += ' isChosen'; badge = ' <span class="badgeBad">❌ bạn đã chọn</span>'; }
+    if(L===correct){ cls += ' isCorrect'; badge = ' <span class="badgeOk">✓</span>'; }
+    else if(L===chosen){ cls += ' isChosen'; badge = ' <span class="badgeBad">✗</span>'; }
     html += '<div class="'+cls+'">'+L+'. '+esc(options[L])+badge+'</div>';
   });
   if(!chosen) html += '<div class="rAns">(Bạn chưa chọn đáp án)</div>';
@@ -663,18 +664,21 @@ function optionsReviewHtml(options, chosen, correct){
   return html;
 }
 
-// Rieng Nghe Phan 1: GIONG HET kieu hien thi luc lam bai (poolImageBlock + bubbleRow letter) -
-// tranh pool anh vao dau PHAN (1 lan duy nhat, khong lap lai tung cau), moi cau chi la 1 hang
-// bubble tron chu cai don gian, to xanh o dap an dung / do o dap an hoc sinh chon sai.
-// Khong hien anh nho trong tung dong nua (truoc day qua roi/kho nhin).
-function bubbleReviewHtml(letters, chosen, correct){
+// GIONG HET kieu bubble tron luc lam bai that (bubbleRow) - dung chung cho Nghe Phan 1
+// (options la mang chu cai, kind='letter') va Nghe Phan 2/3 (options la {letter:text},
+// kind='text') - khong con hien day du danh sach nhu Doc nua, cho gon/sang giong mau em gui.
+function bubbleReviewHtml(options, chosen, correct, kind){
+  var letters, getText;
+  if(Array.isArray(options)){ letters = options; getText = function(l){ return l; }; }
+  else { letters = Object.keys(options||{}).filter(function(l){ return options[l]; }); getText = function(l){ return options[l]; }; }
   var html = '<div class="bubbles">';
   letters.forEach(function(L){
     var cls = 'bubble';
     var mark = '';
     if(L===correct){ cls += ' correct'; mark = ' ✅'; }
     else if(L===chosen){ cls += ' wrong'; mark = ' ❌'; }
-    html += '<div class="'+cls+'">'+L+mark+'</div>';
+    var label = kind==='text' ? (L+'. '+esc(getText(L))) : L;
+    html += '<div class="'+cls+'">'+label+mark+'</div>';
   });
   html += '</div>';
   if(!chosen) html += '<div class="rAns">(Bạn chưa chọn đáp án)</div>';
@@ -691,7 +695,7 @@ function buildReviewHtml(result){
     EXAM.nghe_p1.items.forEach(function(it){
       var chosen = ANSWERS[it.id] || '';
       var ok = !!(it.answer && chosen === it.answer);
-      h += reviewItemHtml(it.id, ok, bubbleReviewHtml(letters, chosen, it.answer), it.giaiThich);
+      h += reviewItemHtml(it.id, ok, bubbleReviewHtml(letters, chosen, it.answer, 'letter'), it.giaiThich);
     });
   })();
 
@@ -700,7 +704,7 @@ function buildReviewHtml(result){
     pair[1].items.forEach(function(it){
       var chosen = ANSWERS[it.id] || '';
       var ok = !!(it.answer && chosen === it.answer);
-      h += reviewItemHtml(it.id, ok, optionsReviewHtml(it.options, chosen, it.answer), it.giaiThich);
+      h += reviewItemHtml(it.id, ok, bubbleReviewHtml(it.options, chosen, it.answer, 'text'), it.giaiThich);
     });
   });
 
