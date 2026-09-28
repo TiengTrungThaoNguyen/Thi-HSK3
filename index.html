@@ -448,15 +448,22 @@ function countQuestions(){
 }
 
 function renderNgheP1(part){
-  var items = part.items || [];
-  var letters = Object.keys(part.pool||{}).filter(function(l){ return part.pool[l]; });
   var h = '<div class="partHead"><div class="name">Nghe – Phần 1</div><div class="desc">Nghe rồi chọn bức tranh đúng.</div></div>';
   h += audioBarHtml(part.linkAudio, 'Audio Nghe – Phần 1');
-  h += poolImageBlock(part.pool||{});
-  items.forEach(function(it){
-    h += '<div class="qRow"><span class="qNum">'+it.id+'.</span>' + bubbleRow(it.id, letters, 'letter') + '</div>';
+  // Moi khoi 5 cau co pool anh + so nut chon RIENG cua khoi do (khong gop
+  // chung anh cua nhieu khoi khac nhau vao 1 chum nhu truoc). Neu server cu
+  // chua co "groups" (tuong thich nguoc) thi coi ca phan la 1 khoi duy nhat.
+  var groups = (part.groups && part.groups.length) ? part.groups : [{ pool: part.pool||{}, items: part.items||[] }];
+  var anyNoAnswer = false;
+  groups.forEach(function(g){
+    var letters = Object.keys(g.pool||{}).filter(function(l){ return g.pool[l]; });
+    h += poolImageBlock(g.pool||{});
+    (g.items||[]).forEach(function(it){
+      if(!it.answer) anyNoAnswer = true;
+      h += '<div class="qRow"><span class="qNum">'+it.id+'.</span>' + bubbleRow(it.id, letters, 'letter') + '</div>';
+    });
   });
-  if(items.some(function(it){ return !it.answer; })) h += '<div class="tbdNote">⏳ Một số câu chưa có đáp án chuẩn trong Sheet.</div>';
+  if(anyNoAnswer) h += '<div class="tbdNote">⏳ Một số câu chưa có đáp án chuẩn trong Sheet.</div>';
   return h;
 }
 
