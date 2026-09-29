@@ -84,7 +84,8 @@
   }
   .partHead{margin-bottom:12px;}
   .partHead .name{font-weight:700; color:var(--pink-primary-dark); font-size:16px;}
-  .partHead .desc{font-size:13px; color:#1e40af; margin-top:2px;}
+  .partHead .zh{font-weight:800; color:var(--pink-primary-dark); font-size:16px; line-height:1.4;}
+  .partHead .desc{font-size:13px; color:#1e40af; margin-top:3px;}
   .qBlock{border-top:1px dashed var(--pink-light); padding-top:14px; margin-top:14px;}
   .qBlock:first-child{border-top:none; padding-top:0; margin-top:0;}
   .qRow{display:flex; align-items:center; gap:10px; margin:10px 0; flex-wrap:wrap;}
@@ -424,12 +425,12 @@ function renderExam(){
 
   html += '<div class="sectionTitle">🎧 Phần Nghe (30 câu)</div>';
   html += '<div class="card">' + renderNgheP1(EXAM.nghe_p1) + '</div>';
-  html += '<div class="card">' + renderNgheMc(EXAM.nghe_p2, 'Nghe – Phần 2', 'Nghe đoạn hội thoại, chọn đáp án đúng.') + '</div>';
-  html += '<div class="card">' + renderNgheMc(EXAM.nghe_p3, 'Nghe – Phần 3', 'Nghe đoạn văn dài hơn, chọn đáp án đúng.') + '</div>';
+  html += '<div class="card">' + renderNgheMc(EXAM.nghe_p2, 'nghe_p2') + '</div>';
+  html += '<div class="card">' + renderNgheMc(EXAM.nghe_p3, 'nghe_p3') + '</div>';
 
   html += '<div class="sectionTitle">📖 Phần Đọc (30 câu)</div>';
-  html += '<div class="card">' + renderDocPool(EXAM.doc_p1, 'Đọc – Phần 1', 'Chọn câu trả lời phù hợp trong bảng bên trên.', 'sentence') + '</div>';
-  html += '<div class="card">' + renderDocPool(EXAM.doc_p2, 'Đọc – Phần 2', 'Chọn từ phù hợp điền vào chỗ trống.', 'word') + '</div>';
+  html += '<div class="card">' + renderDocPool(EXAM.doc_p1, 'doc_p1', 'sentence') + '</div>';
+  html += '<div class="card">' + renderDocPool(EXAM.doc_p2, 'doc_p2', 'word') + '</div>';
   html += '<div class="card">' + renderDocP3(EXAM.doc_p3) + '</div>';
 
   html += '<div class="sectionTitle">✍️ Phần Viết (10 câu)</div>';
@@ -437,6 +438,37 @@ function renderExam(){
   html += '<div class="card">' + renderVietP2(EXAM.viet_p2) + '</div>';
 
   qs('sections').innerHTML = html;
+}
+
+// Nhan song ngu (Trung + dich Viet) cho tung phan - giong cach trinh bay ben
+// he thong HSK2: dong tren la tieu de tieng Trung (co kem so thu tu cau THUC
+// TE lay tu du lieu, vi du "第1~5题"), dong duoi la ban dich/mo ta tieng Viet.
+var PART_LABELS_ = {
+  nghe_p1: { zh: '听录音，选择正确的图片', vi: 'Nghe rồi chọn bức tranh đúng.' },
+  nghe_p2: { zh: '听录音，选择正确答案', vi: 'Nghe đoạn hội thoại, chọn đáp án đúng.' },
+  nghe_p3: { zh: '听录音，选择正确答案', vi: 'Nghe đoạn văn dài hơn, chọn đáp án đúng.' },
+  doc_p1:  { zh: '阅读句子，选择合适的答案', vi: 'Chọn câu trả lời phù hợp trong bảng bên trên.' },
+  doc_p2:  { zh: '选词填空', vi: 'Chọn từ phù hợp điền vào chỗ trống.' },
+  doc_p3:  { zh: '阅读短文，选择正确答案', vi: 'Đọc đoạn văn rồi chọn đáp án đúng.' },
+  viet_p1: { zh: '看拼音，写汉字', vi: 'Nhìn phiên âm (pinyin), điền chữ Hán đúng vào chỗ trống.' },
+  viet_p2: { zh: '看图片和词语，写句子', vi: 'Nhìn tranh và từ gợi ý, viết 1 câu hoàn chỉnh. Phần này giáo viên sẽ chấm trực tiếp, không chấm tự động.' }
+};
+// Nhan Viet ngan gon dung cho nhan Audio va cac cho khac khong can ban dich day du.
+var PART_TITLES_ = {
+  nghe_p1: 'Nghe – Phần 1', nghe_p2: 'Nghe – Phần 2', nghe_p3: 'Nghe – Phần 3',
+  doc_p1: 'Đọc – Phần 1', doc_p2: 'Đọc – Phần 2', doc_p3: 'Đọc – Phần 3',
+  viet_p1: 'Viết – Phần 1', viet_p2: 'Viết – Phần 2'
+};
+function rangeLabel_(items){
+  if(!items || !items.length) return '';
+  var first = items[0].id, last = items[items.length-1].id;
+  return first===last ? String(first) : (first+'~'+last);
+}
+function partHeadHtml_(key, items){
+  var lab = PART_LABELS_[key] || { zh:'', vi:'' };
+  var range = rangeLabel_(items);
+  var zh = (range ? ('第'+range+'题：') : '') + lab.zh;
+  return '<div class="partHead"><div class="zh">'+esc(zh)+'</div><div class="desc">'+esc(lab.vi)+'</div></div>';
 }
 
 function countQuestions(){
@@ -448,8 +480,8 @@ function countQuestions(){
 }
 
 function renderNgheP1(part){
-  var h = '<div class="partHead"><div class="name">Nghe – Phần 1</div><div class="desc">Nghe rồi chọn bức tranh đúng.</div></div>';
-  h += audioBarHtml(part.linkAudio, 'Audio Nghe – Phần 1');
+  var h = partHeadHtml_('nghe_p1', part.items);
+  h += audioBarHtml(part.linkAudio, 'Audio ' + PART_TITLES_.nghe_p1);
   // Moi khoi 5 cau co pool anh + so nut chon RIENG cua khoi do (khong gop
   // chung anh cua nhieu khoi khac nhau vao 1 chum nhu truoc). Neu server cu
   // chua co "groups" (tuong thich nguoc) thi coi ca phan la 1 khoi duy nhat.
@@ -467,10 +499,10 @@ function renderNgheP1(part){
   return h;
 }
 
-function renderNgheMc(part, title, desc){
+function renderNgheMc(part, key){
   var items = part.items || [];
-  var h = '<div class="partHead"><div class="name">'+title+'</div><div class="desc">'+desc+'</div></div>';
-  h += audioBarHtml(part.linkAudio, 'Audio '+title);
+  var h = partHeadHtml_(key, items);
+  h += audioBarHtml(part.linkAudio, 'Audio '+PART_TITLES_[key]);
   items.forEach(function(it, idx){
     h += '<div class="qBlock">';
     h += '<div class="qRow"><span class="qNum">'+it.id+'.</span>' + bubbleRow(it.id, it.options||{}, 'text') + '</div>';
@@ -479,8 +511,8 @@ function renderNgheMc(part, title, desc){
   return h;
 }
 
-function renderDocPool(part, title, desc, mode){
-  var h = '<div class="partHead"><div class="name">'+title+'</div><div class="desc">'+desc+'</div></div>';
+function renderDocPool(part, key, mode){
+  var h = partHeadHtml_(key, part.items);
   h += poolTextBlock(part.pool||{});
   var letters = Object.keys(part.pool||{}).filter(function(l){ return part.pool[l]; });
   (part.items||[]).forEach(function(it){
@@ -491,7 +523,7 @@ function renderDocPool(part, title, desc, mode){
 }
 
 function renderDocP3(part){
-  var h = '<div class="partHead"><div class="name">Đọc – Phần 3</div><div class="desc">Đọc đoạn văn rồi chọn đáp án đúng.</div></div>';
+  var h = partHeadHtml_('doc_p3', part.items);
   var lastPassage = null;
   (part.items||[]).forEach(function(it){
     h += '<div class="qBlock">';
@@ -507,7 +539,7 @@ function renderDocP3(part){
 }
 
 function renderVietP1(part){
-  var h = '<div class="partHead"><div class="name">Viết – Phần 1</div><div class="desc">Nhìn phiên âm (pinyin), điền chữ Hán đúng vào chỗ trống.</div></div>';
+  var h = partHeadHtml_('viet_p1', part.items);
   (part.items||[]).forEach(function(it){
     h += '<div class="vietP1Row">';
     h += '<span class="qNum">'+it.id+'.</span>';
@@ -525,7 +557,7 @@ function onVietP1Input(qid, val){
 }
 
 function renderVietP2(part){
-  var h = '<div class="partHead"><div class="name">Viết – Phần 2</div><div class="desc">Nhìn tranh và từ gợi ý, viết 1 câu hoàn chỉnh. Phần này giáo viên sẽ chấm trực tiếp, không chấm tự động.</div></div>';
+  var h = partHeadHtml_('viet_p2', part.items);
   (part.items||[]).forEach(function(it){
     h += '<div class="vietP2Item">';
     h += '<div class="qNum">Câu '+it.id+'</div>';
