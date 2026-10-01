@@ -84,8 +84,13 @@
   }
   .partHead{margin-bottom:12px;}
   .partHead .name{font-weight:700; color:var(--pink-primary-dark); font-size:16px;}
+  .partLabel{display:inline-block; background:var(--pink-primary); color:#fff; font-weight:700; font-size:12px; padding:3px 12px; border-radius:999px; margin-bottom:8px;}
   .partHead .zh{font-weight:800; color:var(--pink-primary-dark); font-size:16px; line-height:1.4;}
   .partHead .desc{font-size:13px; color:#1e40af; margin-top:3px;}
+  /* Dong tieu de nho danh dau ranh gioi tung khoi cau (vd "第1~5题") ben trong
+     1 phan lon da chia nhieu khoi (nghe_p1, doc_p1, doc_p2). */
+  .groupHead{font-weight:800; color:var(--pink-primary-dark); font-size:14px; margin:16px 0 8px; padding-top:14px; border-top:1px dashed var(--pink-light);}
+  .groupHead:first-of-type{border-top:none; padding-top:0; margin-top:0;}
   .qBlock{border-top:1px dashed var(--pink-light); padding-top:14px; margin-top:14px;}
   .qBlock:first-child{border-top:none; padding-top:0; margin-top:0;}
   .qRow{display:flex; align-items:center; gap:10px; margin:10px 0; flex-wrap:wrap;}
@@ -207,7 +212,7 @@
 
 <script>
 // ================== CAU HINH ==================
-var API_URL = 'https://script.google.com/macros/s/AKfycbzhh9D4ASvAt27L5NuaLLztRdLcKAQtaEDTJ_adgsii-Y_VcGsGSePBaT3TF11E3Kh8/exec';
+var API_URL = 'https://script.google.com/macros/s/AKfycbyTkmoGEA0uDJOhw1arWQ_6CBcgZvuO0daLB-HGjbWZitUk9-nx-7xuKUXPnUN_YWnQ/exec';
 var PENALTY_PER_REPLAY = 10; // tru diem Nghe (thang 100) moi lan bam nghe lai
 
 // ================== STATE ==================
@@ -464,11 +469,19 @@ function rangeLabel_(items){
   var first = items[0].id, last = items[items.length-1].id;
   return first===last ? String(first) : (first+'~'+last);
 }
-function partHeadHtml_(key, items){
+// Dong tieu de nho danh dau ranh gioi tung khoi cau (vd "第1~5题"), dat ngay
+// truoc anh/bang dap an cua khoi do - giup phan biet ro khoi nay voi khoi ke
+// tiep khi 1 phan lon duoc chia thanh nhieu khoi (nghe_p1, doc_p1, doc_p2).
+function groupHeadHtml_(items){
+  var range = rangeLabel_(items);
+  return range ? '<div class="groupHead">第'+esc(range)+'题</div>' : '';
+}
+function partHeadHtml_(key, items, partLabel){
   var lab = PART_LABELS_[key] || { zh:'', vi:'' };
   var range = rangeLabel_(items);
   var zh = (range ? ('第'+range+'题：') : '') + lab.zh;
-  return '<div class="partHead"><div class="zh">'+esc(zh)+'</div><div class="desc">'+esc(lab.vi)+'</div></div>';
+  var labelHtml = partLabel ? '<div class="partLabel">'+esc(partLabel)+'</div>' : '';
+  return '<div class="partHead">'+labelHtml+'<div class="zh">'+esc(zh)+'</div><div class="desc">'+esc(lab.vi)+'</div></div>';
 }
 
 function countQuestions(){
@@ -482,17 +495,22 @@ function countQuestions(){
 function renderNgheP1(part){
   var h = partHeadHtml_('nghe_p1', part.items);
   h += audioBarHtml(part.linkAudio, 'Audio ' + PART_TITLES_.nghe_p1);
-  // Moi khoi 5 cau co pool anh + so nut chon RIENG cua khoi do (khong gop
-  // chung anh cua nhieu khoi khac nhau vao 1 chum nhu truoc). Neu server cu
-  // chua co "groups" (tuong thich nguoc) thi coi ca phan la 1 khoi duy nhat.
-  var groups = (part.groups && part.groups.length) ? part.groups : [{ pool: part.pool||{}, items: part.items||[] }];
+  // Moi khoi 5 cau chi dung 1 ANH DUY NHAT (giong format de thi that: anh da
+  // ve san day du cac lua chon A/B/C/D... ben trong) + so nut chon RIENG cua
+  // khoi do. Neu server cu chua co "groups" (tuong thich nguoc) thi coi ca
+  // phan la 1 khoi duy nhat, va neu con o dang "pool" cu (nhieu anh theo tung
+  // chu cai) thi lay tam 1 anh dai dien trong pool do de khong vo trang.
+  var firstPoolImg_ = function(pool){ var vals = Object.keys(pool||{}).map(function(l){ return pool[l]; }).filter(Boolean); return vals[0] || ''; };
+  var groups = (part.groups && part.groups.length) ? part.groups : [{ image: part.image || firstPoolImg_(part.pool), options: ['A','B','C'], items: part.items||[] }];
   var anyNoAnswer = false;
   groups.forEach(function(g){
-    var letters = Object.keys(g.pool||{}).filter(function(l){ return g.pool[l]; });
-    h += poolImageBlock(g.pool||{});
+    var options = Array.isArray(g.options) ? g.options : (g.pool ? Object.keys(g.pool).filter(function(l){ return g.pool[l]; }) : ['A','B','C']);
+    var image = g.image || firstPoolImg_(g.pool);
+    h += groupHeadHtml_(g.items);
+    if(image) h += '<div class="imgPool"><div class="imgPoolItem"><img src="'+image+'" alt="Ảnh"></div></div>';
     (g.items||[]).forEach(function(it){
       if(!it.answer) anyNoAnswer = true;
-      h += '<div class="qRow"><span class="qNum">'+it.id+'.</span>' + bubbleRow(it.id, letters, 'letter') + '</div>';
+      h += '<div class="qRow"><span class="qNum">'+it.id+'.</span>' + bubbleRow(it.id, options, 'letter') + '</div>';
     });
   });
   if(anyNoAnswer) h += '<div class="tbdNote">⏳ Một số câu chưa có đáp án chuẩn trong Sheet.</div>';
@@ -513,11 +531,19 @@ function renderNgheMc(part, key){
 
 function renderDocPool(part, key, mode){
   var h = partHeadHtml_(key, part.items);
-  h += poolTextBlock(part.pool||{});
-  var letters = Object.keys(part.pool||{}).filter(function(l){ return part.pool[l]; });
-  (part.items||[]).forEach(function(it){
-    h += '<div class="qRow"><span class="qText">'+it.id+'. '+ (mode==='word' ? renderBlankSentence(it.prompt) : esc(it.prompt)) +'</span></div>';
-    h += '<div class="qRow" style="margin-top:-4px">' + bubbleRow(it.id, letters, 'letter') + '</div>';
+  // Giong renderNgheP1: moi khoi 5 cau co pool van ban + so nut chon RIENG
+  // cua khoi do (khong gop chung ca 10 cau vao 1 pool duy nhat nhu truoc).
+  // Neu server cu chua co "groups" (tuong thich nguoc) thi coi ca phan la 1
+  // khoi duy nhat.
+  var groups = (part.groups && part.groups.length) ? part.groups : [{ pool: part.pool||{}, items: part.items||[] }];
+  groups.forEach(function(g){
+    h += groupHeadHtml_(g.items);
+    h += poolTextBlock(g.pool||{});
+    var letters = Object.keys(g.pool||{}).filter(function(l){ return g.pool[l]; });
+    (g.items||[]).forEach(function(it){
+      h += '<div class="qRow"><span class="qText">'+it.id+'. '+ (mode==='word' ? renderBlankSentence(it.prompt) : esc(it.prompt)) +'</span></div>';
+      h += '<div class="qRow" style="margin-top:-4px">' + bubbleRow(it.id, letters, 'letter') + '</div>';
+    });
   });
   return h;
 }
@@ -539,7 +565,7 @@ function renderDocP3(part){
 }
 
 function renderVietP1(part){
-  var h = partHeadHtml_('viet_p1', part.items);
+  var h = partHeadHtml_('viet_p1', part.items, '第一部分');
   (part.items||[]).forEach(function(it){
     h += '<div class="vietP1Row">';
     h += '<span class="qNum">'+it.id+'.</span>';
@@ -557,7 +583,7 @@ function onVietP1Input(qid, val){
 }
 
 function renderVietP2(part){
-  var h = partHeadHtml_('viet_p2', part.items);
+  var h = partHeadHtml_('viet_p2', part.items, '第二部分');
   (part.items||[]).forEach(function(it){
     h += '<div class="vietP2Item">';
     h += '<div class="qNum">Câu '+it.id+'</div>';
@@ -754,15 +780,18 @@ function buildReviewHtml(result){
   var h = '';
 
   h += '<div class="reviewSectionTitle">Nghe – Phần 1</div>';
-  h += poolImageBlock(EXAM.nghe_p1.pool||{});
-  (function(){
-    var letters = Object.keys(EXAM.nghe_p1.pool||{}).filter(function(l){ return EXAM.nghe_p1.pool[l]; });
-    EXAM.nghe_p1.items.forEach(function(it){
+  // Sua theo dung du lieu moi: moi khoi 5 cau co 1 anh + 1 bo nut chon RIENG
+  // cua chinh no (truoc day code doc nham EXAM.nghe_p1.pool - truong nay
+  // khong con ton tai sau khi chia khoi, nen phan xem lai luon hien trong).
+  (EXAM.nghe_p1.groups || []).forEach(function(g){
+    h += groupHeadHtml_(g.items);
+    if(g.image) h += '<div class="imgPool"><div class="imgPoolItem"><img src="'+g.image+'" alt="Ảnh"></div></div>';
+    (g.items||[]).forEach(function(it){
       var chosen = ANSWERS[it.id] || '';
       var ok = !!(it.answer && chosen === it.answer);
-      h += reviewItemHtml(it.id, ok, bubbleReviewHtml(letters, chosen, it.answer, 'letter'), it.giaiThich);
+      h += reviewItemHtml(it.id, ok, bubbleReviewHtml(g.options||[], chosen, it.answer, 'letter'), it.giaiThich);
     });
-  })();
+  });
 
   [['Nghe – Phần 2', EXAM.nghe_p2], ['Nghe – Phần 3', EXAM.nghe_p3]].forEach(function(pair){
     h += '<div class="reviewSectionTitle">'+pair[0]+'</div>';
@@ -776,12 +805,19 @@ function buildReviewHtml(result){
   [['Đọc – Phần 1', EXAM.doc_p1, false], ['Đọc – Phần 2', EXAM.doc_p2, true]].forEach(function(triple){
     h += '<div class="reviewSectionTitle">'+triple[0]+'</div>';
     var part = triple[1], isBlank = triple[2];
-    part.items.forEach(function(it){
-      var chosen = ANSWERS[it.id] || '';
-      var ok = !!(it.answer && chosen === it.answer);
-      var body = '<div class="rPrompt">'+(isBlank ? renderBlankSentence(it.prompt) : esc(it.prompt))+'</div>';
-      body += optionsReviewHtml(part.pool, chosen, it.answer);
-      h += reviewItemHtml(it.id, ok, body, it.giaiThich);
+    // Sua theo dung du lieu moi: moi khoi 5 cau co bang dap an van ban RIENG
+    // cua chinh no (truoc day code doc nham part.pool - truong nay khong con
+    // ton tai o cap phan sau khi chia khoi, nen phan xem lai luon rong).
+    var groups = (part.groups && part.groups.length) ? part.groups : [{ pool: part.pool||{}, items: part.items||[] }];
+    groups.forEach(function(g){
+      h += groupHeadHtml_(g.items);
+      (g.items||[]).forEach(function(it){
+        var chosen = ANSWERS[it.id] || '';
+        var ok = !!(it.answer && chosen === it.answer);
+        var body = '<div class="rPrompt">'+(isBlank ? renderBlankSentence(it.prompt) : esc(it.prompt))+'</div>';
+        body += optionsReviewHtml(g.pool, chosen, it.answer);
+        h += reviewItemHtml(it.id, ok, body, it.giaiThich);
+      });
     });
   });
 
